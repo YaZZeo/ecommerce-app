@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// MODELS
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // RELATIONS
+  session Session?
+  orders  Order[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String
+  expiresAt DateTime
+
+  // RELATIONS
+  userId String @unique @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+
+  cart Cart?
+
+  @@map("sessions")
+}
+
+model Cart {
+  id        String   @id @default(uuid()) @db.Uuid
+  total     Decimal  @db.Money
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // RELATIONS
+  sessionId String  @unique
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  products Cart_Product[]
+
+  @@map("carts")
+}
+
+model Cart_Product {
+  quantity Int
+
+  // RELATIONS
+  cartId String @db.Uuid
+  cart   Cart   @relation(fields: [cartId], references: [id])
+
+  productId String  @db.Uuid
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@id([cartId, productId])
+  @@map("cart_products")
+}
+
+model Product {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  price       Decimal  @db.Money
+  description String
+  category    String
+  stock       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  carts  Cart_Product[]
+  orders Order_Product[]
+
+  @@map("products")
+}
+
+model Order_Product {
+  quantity Int
+
+  // RELATIONS
+  orderId String @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  productId String  @db.Uuid
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@id([orderId, productId])
+  @@map("order_products")
+}
+
+model Order {
+  id        String   @id @default(uuid()) @db.Uuid
+  total     Decimal  @db.Money
+  createdAt DateTime @default(now())
+
+  // RELATIONS
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+
+  payment  Payment?
+  products Order_Product[]
+
+  @@map("orders")
+}
+
+model Payment {
+  id        String   @id @default(uuid()) @db.Uuid
+  paid      Boolean
+  createdAt DateTime @default(now())
+
+  // RELATIONS
+  orderId String @unique @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
